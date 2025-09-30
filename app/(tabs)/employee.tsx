@@ -1,25 +1,25 @@
-// Employees.tsx
 import React, { useState } from 'react';
-import { Alert, Button, Text, TextInput, View } from 'react-native';
-import { supabase } from '../../lib/supabaseClient';
+import { Alert, Button, Text, TextInput, View, ActivityIndicator } from 'react-native';
 import { inviteEmployee, deleteEmployee } from '../../lib/employeeapi';
+import { supabase } from '../../lib/supabaseClient';
 
 export default function EmployeesScreen() {
   const [email, setEmail] = useState('');
   const [employeeId, setEmployeeId] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const getUserId = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user?.id) throw new Error('Not authenticated');
+    return session.user.id;
+  };
+
   const handleInvite = async () => {
     try {
       setLoading(true);
-      const { data: { session } } = await supabase.auth.getSession();
-      const user = session?.user;
-      if (!user?.id) {
-        throw new Error('Not authenticated');
-      }
-
-      // For quick testing we used placeholders for names/title; you can replace with inputs
-      await inviteEmployee(email, user.id, 'John', 'Doe', 'Mr');
+      const ownerId = await getUserId();
+      // You can later replace 'John', 'Doe', 'Mr' with input fields
+      await inviteEmployee(email, ownerId, 'John', 'Doe', 'Mr');
       Alert.alert('Success', 'Employee invited');
       setEmail('');
     } catch (err: any) {
@@ -32,13 +32,8 @@ export default function EmployeesScreen() {
   const handleDelete = async () => {
     try {
       setLoading(true);
-      const { data: { session } } = await supabase.auth.getSession();
-      const user = session?.user;
-      if (!user?.id) {
-        throw new Error('Not authenticated');
-      }
-
-      await deleteEmployee(employeeId, user.id);
+      const ownerId = await getUserId();
+      await deleteEmployee(employeeId, ownerId);
       Alert.alert('Success', 'Employee deleted');
       setEmployeeId('');
     } catch (err: any) {
@@ -74,6 +69,8 @@ export default function EmployeesScreen() {
         autoCapitalize="none"
       />
       <Button title={loading ? 'Please wait...' : 'Delete Employee'} onPress={handleDelete} disabled={loading} />
+
+      {loading && <ActivityIndicator size="large" color="#5B2CFA" style={{ marginTop: 20 }} />}
     </View>
   );
 }
